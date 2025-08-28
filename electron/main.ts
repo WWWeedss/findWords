@@ -61,13 +61,12 @@ function createWindow() {
 }
 
 function startWorker(args: string[] = []) {
-  if (worker) return; // 已经在跑
+  if (worker) return; // 防止重复启动
   const exe = getExePath();
 
   worker = spawn(exe, args, {
     cwd: path.dirname(exe),
-    stdio: ['pipe', 'pipe', 'pipe'],
-    windowsHide: true,
+    stdio: ['pipe', 'pipe', 'pipe']
   });
 
   // 把子进程输出转发到渲染进程
@@ -85,13 +84,28 @@ function startWorker(args: string[] = []) {
 
 function stopWorker() {
   if (!worker) return;
-  // 优雅退出
-  worker.stdin.write('exit\n'); // 如果你的 exe 支持；否则直接 kill
-  setTimeout(() => {
-    try { worker?.kill(); } catch {}
+  try {
+    worker.stdin.write('exit\n');
+  } catch {
+    console.warn('Failed to send exit signal, killing process directly.');
+  }
+
+  const timeout = setTimeout(() => {
+    if (worker && !worker.killed) {
+      console.log('Force killing worker...');
+      // 强制 kill 可能遗留孙子进程，需要检查进程管理器
+      worker.kill();
+    }
     worker = null;
   }, 500);
+
+  worker.on('exit', () => {
+    clearTimeout(timeout);
+    worker = null;
+    console.log('Worker exited cleanly');
+  });
 }
+
 
 
 
@@ -99,6 +113,8 @@ function stopWorker() {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
+  // 退出时顺便把子进程也干掉
+  stopWorker();
   if (process.platform !== 'darwin') {
     app.quit()
     win = null

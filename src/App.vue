@@ -10,18 +10,17 @@ let offExit: (() => void) | null = null;
 
 async function start() {
   await window.wx.start();
-  const s = await window.wx.isRunning();
-  running.value = s.running;
+  running.value = true;
 }
 
 async function stop() {
   await window.wx.stop();
-  const s = await window.wx.isRunning();
-  running.value = s.running;
+  running.value = false;
 }
 
 async function send() {
-  await window.wx.send('hello from renderer');
+  logs.value = [];
+  await window.wx.send('refresh');
 }
 
 onMounted(async () => {
