@@ -129,7 +129,19 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createWindow();
+
+  // 等页面加载完成后再启动子进程
+  win!.webContents.once('did-finish-load', () => {
+    startWorker(); // 这里会自动启动
+  });
+});
+
+// 退出兜底：无论如何退出都先停掉子进程
+app.on('before-quit', () => {
+  stopWorker();
+});
 
 // IPC：渲染进程请求启动/停止/发送消息
 ipcMain.handle('wx:start', (_e, args: string[] = []) => {

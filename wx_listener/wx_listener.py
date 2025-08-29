@@ -35,9 +35,13 @@ def main():
         op = parts[0].lower()
 
         if op == "refresh":
+            new_contact_person = wx.core.chatbox.get_info().get('chat_name')
+            if new_contact_person is None:
+                print("No contactor now!", file=sys.stderr)
+
             if cur_contact_person:
                 wx.RemoveListenChat(cur_contact_person)
-            cur_contact_person = wx.core.chatbox.get_info().get('chat_name')
+            cur_contact_person = new_contact_person
             for message in wx.GetAllMessage():
                 if message.type == 'text':
                     print_message_in_json(message)

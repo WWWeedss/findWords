@@ -2,7 +2,7 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 
 const logs = ref<string[]>([]);
-const running = ref(false);
+const running = ref(true);
 
 let offData: (() => void) | null = null;
 let offError: (() => void) | null = null;
