@@ -38,8 +38,8 @@ function getExePath() {
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
-    width: 1200,
-    height: 800,
+    width: 800,
+    height: 650,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

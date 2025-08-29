@@ -29,4 +29,5 @@ wx_listener/.venv
 wx_listener/build
 *wxauto_logs
 *@AutomationLog.txt
+*wx_listener.exe
 
