@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, onBeforeUnmount, ref } from 'vue';
+import Button from 'primevue/button'
 
 const logs = ref<string[]>([]);
 const running = ref(true);
@@ -42,6 +43,7 @@ onBeforeUnmount(() => {
       <button @click="start">启动</button>
       <button @click="send">发送消息</button>
       <button @click="stop">停止</button>
+      <Button label="PrimeVue 按钮" />
     </div>
     <pre class="bg-gray-100 p-2 h-80 overflow-auto">{{ logs.join('') }}</pre>
   </div>
