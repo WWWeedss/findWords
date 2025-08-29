@@ -1,0 +1,24 @@
+/* Tailwind v4 入口 */
+@import "tailwindcss";
+
+/* 页面基础：Electron 窗口 800x650，可用 100vw/100vh 填满 */
+html, body, #app { height: 100%; }
+body { margin: 0; }
+
+/* 微信气泡辅助色（尽量使用现成的 utility，必要时少量自定义） */
+:root {
+    --wx-green: #95ec69; /* 微信聊天我的消息底色（接近微信）*/
+    --wx-gray:  #f5f5f7; /* 对方消息底色（接近微信）*/
+}
+
+.wx-own   { background: var(--wx-green); color: #0b0b0b; }
+.wx-other { background: #ffffff; color: #111827; border: 1px solid #e5e7eb; }
+
+/* 气泡公共样式 */
+.bubble {
+    @apply px-3 py-2 rounded-2xl max-w-[75%] leading-relaxed shadow-sm;
+}
+
+/* 左栏滚动条微调（可选） */
+.scroll-slim::-webkit-scrollbar { width: 6px; }
+.scroll-slim::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 9999px; }
