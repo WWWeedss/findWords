@@ -1,8 +1,8 @@
 <template>
   <div class="h-full flex flex-col">
     <!-- 顶栏 -->
-    <div class="p-3 border-gray-200 flex items-center justify-between border-b ">
-      <div class="font-medium">聊天同步区</div>
+    <div class="p-3 border-gray-200 flex items-center justify-between border-b">
+      <div class="font-bold">{{chatState.curContact}}</div>
       <button
           class="px-3 py-1 rounded-md bg-green-500 text-white hover:opacity-90 cursor-pointer hover:bg-green-600"
           @click="onSyncClick"
@@ -13,8 +13,15 @@
     <!-- 聊天滚动区 -->
     <div ref="scrollRef" class="overflow-y-auto scroll-slim bg-gray-50">
       <div class="flex-1 p-3 space-y-2 h-[85vh]">
-        <div v-for="(m, idx) in chatState.messages" :key="idx" class="w-full flex" :class="m.isOwn ? 'justify-end' : 'justify-start'">
-          Sender: {{m.sender}}, Content: {{m.content}}, Own: {{m.isOwn}}
+        <div v-for="(message, index) in chatState.messages" :key="index" class="w-full flex" :class="message.isOwn ? 'justify-end' : 'justify-start'">
+          <div
+              class="max-w-[70%] px-3 py-2 rounded-lg text-sm leading-relaxed break-words"
+              :class="message.isOwn
+              ? 'bg-[#95ec69] text-black rounded-br-sm'
+              : 'bg-white text-gray-800 rounded-bl-sm border border-gray-200'"
+          >
+            {{ message.content }}
+          </div>
         </div>
       </div>
     </div>
@@ -29,26 +36,68 @@
 <script setup lang="ts">
 import {onMounted, ref, watch} from 'vue'
 import { useChatStore } from '../stores/chatStore'
-import ChatBubble from './ChatBubble.vue'
 import {sleep} from "../../common/asyncTools.ts";
 import {ChatMsg} from "../typings/chat.ts";
 
 const buttonValue = ref('同步聊天记录')
-let output:string[] = [];
+const chatState = useChatStore()
 let error:string[] = [];
 onMounted(() => {
   // 监听微信监听器发送的消息
-  window.wx.onData((d) => output.push(`${d}`));
+  window.wx.onData((d) => {
+    if (d.includes("sender") && d.includes("content")) {
+      try {
+        const messages = processOutput(d);
+        chatState.addMessages(messages);
+      } catch (e) {
+        console.error("处理消息失败：", d, e);
+      }
+    }
+  });
   window.wx.onError((d) => error.push(`${d}`));
 })
 
-const chatState = useChatStore()
+function processOutput(output: string): ChatMsg[] {
+  const messages: ChatMsg[] = [];
+  const lines = output.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && line.startsWith('{') && line.endsWith('}'));
+
+  for (const line of lines) {
+    try {
+      const msg = processSingleOutput(line);
+      messages.push(msg);
+    } catch (e) {
+      console.warn("解析消息失败，跳过:", line);
+    }
+  }
+
+  return messages;
+}
+
+function processSingleOutput(output: string): ChatMsg {
+  const jsonObject = JSON.parse(output);
+
+  // 添加验证
+  if (!jsonObject.sender || !jsonObject.content || typeof jsonObject.isOwn !== 'boolean') {
+    throw new Error('无效的消息格式');
+  }
+
+  return {
+    sender: String(jsonObject.sender),
+    content: String(jsonObject.content),
+    curContact: String(jsonObject.curContact),
+    isOwn: Boolean(jsonObject.isOwn)
+  };
+}
+
+
 const scrollRef = ref<HTMLDivElement | null>(null);
 let isRunning = false;
 async function onSyncClick() {
   // 清理状态
   isRunning = await window.wx.isRunning();
-  output = []
+  chatState.clearMessages();
   error = []
 
   if (!isRunning) {
@@ -80,65 +129,11 @@ async function onSyncClick() {
     return
   }
 
-  // 处理 output
+  // 等待处理 output
   await sleep(3000)
-  // 一次性处理所有输出
-  const allMessages: ChatMsg[] = []
-
-  for (const element of output) {
-    if (element.includes("sender") && element.includes("content")) {
-      try {
-        const messages = processOutput(element);
-        allMessages.push(...messages);
-      } catch (e) {
-        console.error("处理消息失败：", element, e);
-      }
-    }
-  }
-
-  // 设置新消息
-  if (allMessages.length > 0) {
-    chatState.setMessages(allMessages);
-  } else {
-    alert("未找到有效文字消息！")
-    console.log("未找到有效消息");
-  }
 
   console.log("最终消息:", chatState.messages);
   buttonValue.value = '同步聊天记录'
-}
-
-function processOutput(output: string): ChatMsg[] {
-  const messages: ChatMsg[] = [];
-  const lines = output.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0 && line.startsWith('{') && line.endsWith('}'));
-
-  for (const line of lines) {
-    try {
-      const msg = processSingleOutput(line);
-      messages.push(msg);
-    } catch (e) {
-      console.warn("解析消息失败，跳过:", line);
-    }
-  }
-
-  return messages;
-}
-
-function processSingleOutput(output: string): ChatMsg {
-  const jsonObject = JSON.parse(output);
-
-  // 添加验证
-  if (!jsonObject.sender || !jsonObject.content || typeof jsonObject.isOwn !== 'boolean') {
-    throw new Error('无效的消息格式');
-  }
-
-  return {
-    sender: String(jsonObject.sender),
-    content: String(jsonObject.content),
-    isOwn: Boolean(jsonObject.isOwn)
-  };
 }
 
 function scrollToBottom() {

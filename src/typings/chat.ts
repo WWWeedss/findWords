@@ -1,6 +1,6 @@
 export interface ChatMsg {
     sender: string
     content: string
-    timestamp?: string
+    curContact: string
     isOwn?: boolean
 }

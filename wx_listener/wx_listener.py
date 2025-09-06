@@ -6,16 +6,17 @@ nickname = wx.core.nickname
 cur_contact_person = None
 
 class Message:
-    def __init__(self, sender, content):
+    def __init__(self, sender, content, cur_contact_person):
         self.sender = sender
         self.content = content
+        self.cur_contact_person = cur_contact_person
         self.isOwn = (sender == nickname)
-    def to_dict(self): return {'sender': self.sender, 'content': self.content, 'isOwn': self.isOwn}
+    def to_dict(self): return {'sender': self.sender, 'content': self.content,'curContact': self.cur_contact_person, 'isOwn': self.isOwn}
     def to_json(self): return json.dumps(self.to_dict(), ensure_ascii=False)
 
 def print_message_in_json(msg):
     sender = msg.sender if msg.sender != 'self' else nickname
-    print(Message(sender, msg.content).to_json())
+    print(Message(sender, msg.content, cur_contact_person).to_json())
 
 def on_message(msg, chat):
     if msg.type == 'text':
