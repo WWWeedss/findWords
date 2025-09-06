@@ -9,7 +9,8 @@ class Message:
     def __init__(self, sender, content):
         self.sender = sender
         self.content = content
-    def to_dict(self): return {'sender': self.sender, 'content': self.content}
+        self.isOwn = (sender == nickname)
+    def to_dict(self): return {'sender': self.sender, 'content': self.content, 'isOwn': self.isOwn}
     def to_json(self): return json.dumps(self.to_dict(), ensure_ascii=False)
 
 def print_message_in_json(msg):
@@ -38,6 +39,7 @@ def main():
             new_contact_person = wx.core.chatbox.get_info().get('chat_name')
             if new_contact_person is None:
                 print("No contactor now!", file=sys.stderr)
+                continue
 
             if cur_contact_person:
                 wx.RemoveListenChat(cur_contact_person)

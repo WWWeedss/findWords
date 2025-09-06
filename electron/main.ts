@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain} from 'electron'
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -132,11 +132,6 @@ app.on('activate', () => {
 
 app.whenReady().then(() => {
   createWindow();
-
-  // 等页面加载完成后再启动子进程
-  win!.webContents.once('did-finish-load', () => {
-    startWorker(); // 这里会自动启动
-  });
 });
 
 // 退出兜底：无论如何退出都先停掉子进程
@@ -162,5 +157,5 @@ ipcMain.handle('wx:send', (_e, payload: string) => {
 });
 
 ipcMain.handle('wx:isRunning', () => {
-  return { running: !!worker && !worker.killed };
+  return !!worker;
 });

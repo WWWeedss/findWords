@@ -2,60 +2,143 @@
   <div class="h-full flex flex-col">
     <!-- 顶栏 -->
     <div class="p-3 border-gray-200 flex items-center justify-between border-b ">
-      <div class="font-medium">顾秋炎</div>
+      <div class="font-medium">聊天同步区</div>
       <button
-          class="px-3 py-1 rounded-md bg-green-500 text-white hover:opacity-90"
+          class="px-3 py-1 rounded-md bg-green-500 text-white hover:opacity-90 cursor-pointer hover:bg-green-600"
           @click="onSyncClick"
-      >同步聊天记录
+      >{{ buttonValue }}
       </button>
     </div>
 
     <!-- 聊天滚动区 -->
-    <div ref="scrollRef" class="overflow-y-auto scroll-slim">
-      <div class="flex-1 p-3 space-y-2 bg-gray-50 h-[85vh]">
-        <div v-for="(m, idx) in msgs" :key="idx" class="w-full flex" :class="m.isOwn ? 'justify-end' : 'justify-start'">
-          <ChatBubble :own="m.isOwn" :sender="m.sender" :content="m.content"/>
+    <div ref="scrollRef" class="overflow-y-auto scroll-slim bg-gray-50">
+      <div class="flex-1 p-3 space-y-2 h-[85vh]">
+        <div v-for="(m, idx) in chatState.messages" :key="idx" class="w-full flex" :class="m.isOwn ? 'justify-end' : 'justify-start'">
+          Sender: {{m.sender}}, Content: {{m.content}}, Own: {{m.isOwn}}
         </div>
       </div>
     </div>
 
     <!-- 说明 -->
     <div class="text-xs text-gray-500 p-3 border-t border-gray-200">
-      • 同步后新消息将自动更新（示例中使用 mock；Electron 中可通过 `window.api` 与主进程交互）。
+      • 同步后新消息将自动更新，请直接在取出的窗口中聊天哦。
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import {onMounted, ref, watch} from 'vue'
-import {chatState, addMessage} from '../stores/chatStore'
+import { useChatStore } from '../stores/chatStore'
 import ChatBubble from './ChatBubble.vue'
+import {sleep} from "../../common/asyncTools.ts";
+import {ChatMsg} from "../typings/chat.ts";
 
-const msgs = chatState.messages
-const scrollRef = ref<HTMLDivElement | null>(null)
+const buttonValue = ref('同步聊天记录')
+let output:string[] = [];
+let error:string[] = [];
+onMounted(() => {
+  // 监听微信监听器发送的消息
+  window.wx.onData((d) => output.push(`${d}`));
+  window.wx.onError((d) => error.push(`${d}`));
+})
 
-function onSyncClick() {
-  // 标记同步；实际 Electron 可：window.api.startSync()
-  chatState.syncing = true
+const chatState = useChatStore()
+const scrollRef = ref<HTMLDivElement | null>(null);
+let isRunning = false;
+async function onSyncClick() {
+  // 清理状态
+  isRunning = await window.wx.isRunning();
+  output = []
+  error = []
 
-  // 演示：模拟后台持续进来消息（真实场景：监听主进程/后端 stdout 行）
-  mockIncoming()
-}
+  if (!isRunning) {
+    buttonValue.value = '启动监听程序中...'
+    // 第一次同步，启动微信监听器
+    await window.wx.start();
+    // 检查 error.value 处理报错
 
-function mockIncoming() {
-  const demo = [
-    {sender: '顾秋炎', content: '今天挺累的。'},
-    {sender: '我', content: '辛苦啦，要不要点个外卖？', isOwn: true},
-    {sender: '顾秋炎', content: '好呀，你选吧~'},
-  ]
-  let i = 0
-  const timer = setInterval(() => {
-    if (!chatState.syncing || i >= demo.length) {
-      clearInterval(timer);
+    await sleep(1500) // 等待一会儿，让错误信息有机会进来
+    if (error.length > 0) {
+      console.error("微信监听器启动失败：", error);
+      alert("微信监听器启动失败，请检查是否打开微信客户端！");
       return
     }
-    addMessage(demo[i++] as any)
-  }, 1200)
+    isRunning = true;
+    // 启动成功
+    console.log("微信监听器已启动")
+  }
+  buttonValue.value = '正在同步...'
+  // 标记同步；实际 Electron 可：window.api.startSync()
+  // 监听微信消息
+  await window.wx.send("refresh");
+
+  await sleep(100)
+  if (error.length > 0) {
+    console.error("微信监听器同步失败：", error);
+    alert("未检索到聊天窗口，请先打开目标聊天窗口！");
+    buttonValue.value = '同步聊天记录'
+    return
+  }
+
+  // 处理 output
+  await sleep(3000)
+  // 一次性处理所有输出
+  const allMessages: ChatMsg[] = []
+
+  for (const element of output) {
+    if (element.includes("sender") && element.includes("content")) {
+      try {
+        const messages = processOutput(element);
+        allMessages.push(...messages);
+      } catch (e) {
+        console.error("处理消息失败：", element, e);
+      }
+    }
+  }
+
+  // 设置新消息
+  if (allMessages.length > 0) {
+    chatState.setMessages(allMessages);
+  } else {
+    alert("未找到有效文字消息！")
+    console.log("未找到有效消息");
+  }
+
+  console.log("最终消息:", chatState.messages);
+  buttonValue.value = '同步聊天记录'
+}
+
+function processOutput(output: string): ChatMsg[] {
+  const messages: ChatMsg[] = [];
+  const lines = output.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && line.startsWith('{') && line.endsWith('}'));
+
+  for (const line of lines) {
+    try {
+      const msg = processSingleOutput(line);
+      messages.push(msg);
+    } catch (e) {
+      console.warn("解析消息失败，跳过:", line);
+    }
+  }
+
+  return messages;
+}
+
+function processSingleOutput(output: string): ChatMsg {
+  const jsonObject = JSON.parse(output);
+
+  // 添加验证
+  if (!jsonObject.sender || !jsonObject.content || typeof jsonObject.isOwn !== 'boolean') {
+    throw new Error('无效的消息格式');
+  }
+
+  return {
+    sender: String(jsonObject.sender),
+    content: String(jsonObject.content),
+    isOwn: Boolean(jsonObject.isOwn)
+  };
 }
 
 function scrollToBottom() {
@@ -64,5 +147,6 @@ function scrollToBottom() {
 }
 
 onMounted(scrollToBottom)
+
 watch(() => chatState.messages.length, scrollToBottom)
 </script>
