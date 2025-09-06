@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain  } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -36,6 +36,7 @@ function getExePath() {
 }
 
 function createWindow() {
+  // Menu.setApplicationMenu(null);
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     width: 800,
