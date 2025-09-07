@@ -11,6 +11,8 @@
   "dependencies": {
     "@primeuix/themes": "^1.2.3",
     "chart.js": "^4.5.0",
+    "dotenv": "^17.2.2",
+    "openai": "^5.19.1",
     "pinia": "^3.0.3",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.7",

@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import {onMounted, ref, watch} from 'vue'
 import { useChatStore } from '../stores/chatStore'
-import {sleep} from "../../common/asyncTools.ts";
+import {sleep} from "../common/asyncTools.ts";
 import {ChatMsg} from "../typings/chat.ts";
 
 const buttonValue = ref('同步聊天记录')
@@ -91,8 +91,6 @@ function processSingleOutput(output: string): ChatMsg {
   };
 }
 
-
-const scrollRef = ref<HTMLDivElement | null>(null);
 let isRunning = false;
 async function onSyncClick() {
   // 清理状态
@@ -135,6 +133,8 @@ async function onSyncClick() {
   console.log("最终消息:", chatState.messages);
   buttonValue.value = '同步聊天记录'
 }
+
+const scrollRef = ref<HTMLDivElement | null>(null);
 
 function scrollToBottom() {
   const el = scrollRef.value

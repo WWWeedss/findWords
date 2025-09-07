@@ -4,3 +4,8 @@ export interface ChatMsg {
     curContact: string
     isOwn?: boolean
 }
+
+export interface AIChatMsg {
+    role: 'user' | 'assistant' | 'system'
+    content: string
+}
