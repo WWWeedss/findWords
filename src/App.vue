@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white ">
+  <div class="bg-white">
     <div class="grid grid-cols-12 h-full">
       <aside class="col-span-6 border-r border-gray-200">
         <ChatList />
