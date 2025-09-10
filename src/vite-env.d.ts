@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 // src/env.d.ts
+import {EnvVariables} from "./typings/envTyping.ts";
+
 export {};
 
 declare global {
@@ -13,5 +15,9 @@ declare global {
             onError(cb: (data: string) => void): () => void;
             onExit(cb: (info: { code: number | null; signal: string | null }) => void): () => void;
         };
+        env: {
+            get() : Promise<EnvVariables>;
+        };
+        wxListenerAdded: boolean;
     }
 }

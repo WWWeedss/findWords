@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain} from 'electron'
 import { spawn, ChildProcessWithoutNullStreams } from 'node:child_process';
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import * as dotenv from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -34,6 +35,8 @@ function getExePath() {
   // 开发环境：从项目根目录的 resources/ 找
   return path.join(process.cwd(), 'resources', 'wx_listener.exe');
 }
+
+
 
 function createWindow() {
   // Menu.setApplicationMenu(null);
@@ -159,3 +162,15 @@ ipcMain.handle('wx:send', (_e, payload: string) => {
 ipcMain.handle('wx:isRunning', () => {
   return !!worker;
 });
+
+
+// 读取环境变量
+ipcMain.handle('env:load', () => {
+    dotenv.config({
+        path: path.join(process.env.APP_ROOT, '.env')
+    });
+    return {
+        DEEPSEEK_KEY: process.env.DEEPSEEK_KEY || "",
+    };
+});
+

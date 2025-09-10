@@ -11,17 +11,16 @@ export const useAIChatStore = defineStore('aiChat', {
 
     actions: {
         // 添加AI聊天消息
-        addAIMessage(msg: AIChatMsg) {
+        addMessage(msg: AIChatMsg) {
             this.aiMessages.push(msg);
         },
         // 清空AI聊天消息
         clearAIMessages() {
-            this.aiMessages = [];
+            this.aiMessages.splice(1, this.aiMessages.length - 1);
         },
         // 添加微信聊天记录到 System Prompt 内
         addWeChatRecord(msgs: ChatMsg[]) {
             // 格式化聊天记录
-
             const formattedRecords = msgs.map(msg => {
                 const sender = msg.isOwn ? "我" : msg.sender;
                 return `${sender}: ${msg.content}`;
@@ -33,6 +32,14 @@ export const useAIChatStore = defineStore('aiChat', {
             }
             // 聊天记录总放在第二条
             this.aiMessages.splice(1, 1, systemPrompt);
+        },
+        // 流式追加AI回复内容
+        appendToLastAIMessage(contentChunk: string) {
+            if (this.aiMessages.length === 0 || this.aiMessages[this.aiMessages.length - 1].role !== "assistant") {
+                this.aiMessages.push({role: "assistant", content: contentChunk});
+            } else {
+                this.aiMessages[this.aiMessages.length - 1].content += contentChunk;
+            }
         }
     },
 });

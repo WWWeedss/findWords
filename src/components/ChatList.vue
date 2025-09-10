@@ -38,23 +38,30 @@ import {onMounted, ref, watch} from 'vue'
 import { useChatStore } from '../stores/chatStore'
 import {sleep} from "../common/asyncTools.ts";
 import {ChatMsg} from "../typings/chat.ts";
+import {useAIChatStore} from "../stores/aiChatStore.ts";
 
 const buttonValue = ref('同步聊天记录')
 const chatState = useChatStore()
+const aiChatMegsStore = useAIChatStore();
 let error:string[] = [];
 onMounted(() => {
+  console.log(window.wxListenerAdded)
+  if (window.wxListenerAdded) return;
   // 监听微信监听器发送的消息
   window.wx.onData((d) => {
     if (d.includes("sender") && d.includes("content")) {
       try {
         const messages = processOutput(d);
         chatState.addMessages(messages);
+        aiChatMegsStore.addWeChatRecord(chatState.messages);
       } catch (e) {
         console.error("处理消息失败：", d, e);
       }
     }
   });
   window.wx.onError((d) => error.push(`${d}`));
+  // 保证 onMounted 只执行一次
+  window.wxListenerAdded = true;
 })
 
 function processOutput(output: string): ChatMsg[] {
@@ -96,6 +103,7 @@ async function onSyncClick() {
   // 清理状态
   isRunning = await window.wx.isRunning();
   chatState.clearMessages();
+  aiChatMegsStore.clearAIMessages();
   error = []
 
   if (!isRunning) {

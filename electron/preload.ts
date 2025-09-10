@@ -44,3 +44,7 @@ contextBridge.exposeInMainWorld('wx', {
     return () => ipcRenderer.removeListener('wx:exit', listener);
   },
 });
+
+contextBridge.exposeInMainWorld('env', {
+    get: () => ipcRenderer.invoke('env:load')
+})

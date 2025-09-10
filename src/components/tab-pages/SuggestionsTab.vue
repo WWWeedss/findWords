@@ -3,14 +3,21 @@
     <!-- 聊天框 -->
     <div class="overflow-y-auto scroll-slim bg-gray-50">
       <div class="flex-1 p-3 rounded-lg space-y-2 h-[74vh]">
-        <div v-for="(msg, index) in aiChatMegs" :key="index" class="w-full flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
-          <div
+        <div v-for="(msg, index) in aiChatMegsStore.aiMessages"
+             :key="index" class="w-full flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
+          <div v-if="msg.role !== 'system'"
               class="max-w-[70%] px-3 py-2 rounded-lg text-sm leading-relaxed break-words whitespace-pre-wrap"
               :class="msg.role === 'user'
             ? 'bg-blue-200 text-black rounded-br-sm'
             : 'bg-white text-gray-800 rounded-bl-sm border border-gray-200'"
           >
             {{ msg.content }}
+          </div>
+        </div>
+        <!-- 如果正在回复，显示加载中的消息 -->
+        <div v-if="isReplying" class="w-full flex justify-start">
+          <div class="max-w-[70%] px-3 py-2 rounded-lg text-sm leading-relaxed break-words whitespace-pre-wrap bg-white text-gray-800 rounded-bl-sm border border-gray-200">
+            <span class="animate-pulse text-gray-400">正在思考...</span>
           </div>
         </div>
       </div>
@@ -21,24 +28,28 @@
     <div class="mt-3 flex items-center gap-2">
        <Textarea
            v-model="custom"
-           placeholder="说说看你想怎么回……"
+           :placeholder="isReplying? '解析中…' : '说说看你想怎么回'"
            class="flex-1 border border-gray-300 rounded-md px-3 py-2 outline-none focus:ring-2 focus:ring-green-300 resize-none scroll-slim"
            @keydown="handleKeydown"
            rows="1"
            @input="autoResize"
+           :disabled="isReplying"
        ></Textarea>
-      <button class="px-3 py-2 rounded-md bg-green-500 text-white hover:opacity-90 cursor-pointer" @click="appendCustom">发送</button>
+      <button class="px-3 py-2 rounded-md bg-green-500 text-white hover:opacity-90 cursor-pointer" @click="appendCustom">
+        {{isReplying? '解析中…' : '发送'}}
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import {nextTick, ref} from 'vue'
-import {AIChatMsg} from "../../typings/chat.ts";
 import Textarea from 'primevue/textarea';
+import {useAIChatStore} from "../../stores/aiChatStore.ts";
+import {getStreamedCompletion} from "../../apis/deepseek.ts";
 
 
-const aiChatMegs = ref<AIChatMsg[]>([]);
+const aiChatMegsStore =  useAIChatStore();
 const custom = ref('')
 
 // 处理键盘按键
@@ -50,14 +61,16 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+// 追加用户提问
 function appendCustom(event?: Event) {
   if (!custom.value.trim()) return
-  aiChatMegs.value.push({
+  aiChatMegsStore.addMessage({
     role: 'user',
     content: custom.value.trim()
   })
   custom.value = '';
   autoResize(event);
+  appendAIReply();
 }
 
 // 调整 textarea 高度
@@ -70,5 +83,20 @@ function autoResize(event?: Event) {
       textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
     }
   });
+}
+
+const isReplying = ref(false);
+// AI 回复
+async function appendAIReply() {
+  isReplying.value = true;
+  const response = await getStreamedCompletion(aiChatMegsStore.aiMessages);
+  if (response) {
+    for await (const chunk of response) {
+      isReplying.value = false;
+      if (chunk.choices[0].delta?.content) {
+        aiChatMegsStore.appendToLastAIMessage(chunk.choices[0].delta.content);
+      }
+    }
+  }
 }
 </script>
